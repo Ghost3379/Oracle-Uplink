@@ -1,0 +1,39 @@
+# Standard Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# CircuitPython / macOS specific
+.fseventsd/
+.Trashes
+.metadata_mac
+.Spotlight-V100
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Personal Sandbox
+# Ignore local tests in the root so you don't accidentally commit them
+code.py
+settings.toml

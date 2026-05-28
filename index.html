@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oracle Network - Dynamic Uplink</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px;
+            background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .container {
+            border: 1px solid #00ff00;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            background-color: rgba(0,0,0,0.8);
+        }
+        h2 {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .card {
+            border: 1px solid #333;
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.05);
+            display: none; /* Hidden by default until handshake */
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #bb86fc;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 5px;
+            font-size: 14px;
+        }
+        .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 10px;
+        }
+        button {
+            background-color: transparent;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        #terminal {
+            background-color: #050505;
+            border: 1px solid #333;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+        }
+        .sys { color: #ffaa00; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>[ ORACLE NETWORK HARDWARE UPLINK ]</h2>
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <span id="statusSpan" style="color: #555;">STATUS: OFFLINE</span><br>
+        <button id="connectBtn" style="width: auto; margin-top: 10px;">INITIALIZE BLUETOOTH SCAN</button>
+    </div>
+
+    <!-- Dynamic Dashboard (Initially Hidden) -->
+    <div class="dashboard" id="dashboard">
+        
+        <div class="card" id="card_battery">
+            <h3>BATTERY DIAGNOSTICS</h3>
+            <div class="value" id="val_batt">-- V / -- %</div>
+        </div>
+
+        <div class="card" id="card_sys_temp">
+            <h3>CORE TEMPERATURE</h3>
+            <div class="value" id="val_temp">-- °C</div>
+        </div>
+
+        <div class="card" id="card_ram">
+            <h3>MEMORY ALLOCATION</h3>
+            <div class="value" id="val_ram">-- KB Free</div>
+        </div>
+
+        <div class="card" id="card_storage">
+            <h3>FLASH STORAGE</h3>
+            <div class="value" id="val_storage">-- MB Free</div>
+        </div>
+
+        <div class="card" id="card_neopixel">
+            <h3>NEOPIXEL OVERRIDE</h3>
+            <input type="color" id="colorPicker" value="#ff00ff" style="width: 100%; height: 40px; background: transparent; border: 1px solid #00ff00; cursor: pointer;">
+            <button id="colorBtn">APPLY COLOR</button>
+        </div>
+
+    </div>
+
+    <!-- Master Controls -->
+    <div id="master_controls" style="display:none; margin-top: 20px; border-top: 1px dashed #333; padding-top: 15px;">
+        <button id="statusBtn" style="width: auto;">PULL DIAGNOSTICS</button>
+    </div>
+
+    <div id="terminal"></div>
+</div>
+
+<script>
+    const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const UART_RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+    const UART_TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+    let bleDevice, rxCharacteristic, txCharacteristic;
+    let rxBuffer = ""; // Buffer to fix the chunking issue!
+
+    const terminal = document.getElementById('terminal');
+
+    function log(msg, type="") {
+        const div = document.createElement('div');
+        div.textContent = `> ${msg}`;
+        if(type) div.className = type;
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+        try {
+            log('Requesting Device...', 'sys');
+            bleDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'ORACLE' }],
+                optionalServices: [UART_SERVICE_UUID]
+            });
+            const server = await bleDevice.gatt.connect();
+            const service = await server.getPrimaryService(UART_SERVICE_UUID);
+            rxCharacteristic = await service.getCharacteristic(UART_RX_CHAR_UUID);
+            txCharacteristic = await service.getCharacteristic(UART_TX_CHAR_UUID);
+            
+            await txCharacteristic.startNotifications();
+            txCharacteristic.addEventListener('characteristicvaluechanged', handleData);
+            
+            document.getElementById('statusSpan').textContent = "STATUS: LINK ACTIVE - AWAITING HANDSHAKE";
+            document.getElementById('statusSpan').style.color = "#00ff00";
+            document.getElementById('connectBtn').style.display = 'none';
+
+            log('Connected. Transmitting INIT signal...', 'sys');
+            sendCommand("INIT");
+        } catch (e) {
+            log('Error: ' + e, 'sys');
+        }
+    });
+
+    function handleData(event) {
+        const decoder = new TextDecoder('utf-8');
+        rxBuffer += decoder.decode(event.target.value);
+        
+        // Wait until we see a newline \n before trying to parse JSON!
+        let newlineIndex;
+        while ((newlineIndex = rxBuffer.indexOf('\n')) !== -1) {
+            let completeMessage = rxBuffer.substring(0, newlineIndex).trim();
+            rxBuffer = rxBuffer.substring(newlineIndex + 1);
+            
+            if (completeMessage) {
+                log("RAW JSON: " + completeMessage);
+                processJSON(completeMessage);
+            }
+        }
+    }
+
+    function processJSON(jsonStr) {
+        try {
+            const data = JSON.parse(jsonStr);
+            
+            // Handshake dynamically reveals UI cards
+            if (data.type === "handshake") {
+                log(`Handshake Verified: ${data.device_name}`, 'sys');
+                document.getElementById('master_controls').style.display = 'block';
+                document.getElementById('statusSpan').textContent = `SECURE LINK: ${data.device_name}`;
+                document.getElementById('statusSpan').style.color = "#bb86fc";
+                
+                // Show ONLY the cards that the hardware supports
+                data.capabilities.forEach(cap => {
+                    const card = document.getElementById(`card_${cap}`);
+                    if (card) card.style.display = 'block';
+                });
+            }
+            
+            // Status updates the values inside the visible cards
+            if (data.type === "status") {
+                if (data.battery_v) document.getElementById('val_batt').textContent = `${data.battery_v}V / ${data.battery_pct}%`;
+                if (data.cpu_temp) document.getElementById('val_temp').textContent = `${data.cpu_temp} °C`;
+                if (data.ram_free_kb) document.getElementById('val_ram').textContent = `${data.ram_free_kb} KB Free`;
+                if (data.flash_free_mb) document.getElementById('val_storage').textContent = `${data.flash_free_mb} MB Free`;
+            }
+            
+        } catch (e) {
+            // Ignore non-json stuff like "PONG"
+        }
+    }
+
+    async function sendCommand(cmd) {
+        if (!rxCharacteristic) return;
+        const encoder = new TextEncoder();
+        await rxCharacteristic.writeValue(encoder.encode(cmd + '\n'));
+    }
+
+    document.getElementById('statusBtn').addEventListener('click', () => sendCommand('STATUS'));
+    document.getElementById('colorBtn').addEventListener('click', () => {
+        sendCommand(`COLOR:${document.getElementById('colorPicker').value}`);
+    });
+</script>
+</body>
+</html>
