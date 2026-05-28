@@ -37,3 +37,5 @@ wheels/
 # Ignore local tests in the root so you don't accidentally commit them
 code.py
 settings.toml
+CPY VERSION/
+*ble_old*

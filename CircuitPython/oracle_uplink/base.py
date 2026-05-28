@@ -12,6 +12,18 @@ class UplinkBase:
         """Sets the internal gadget name sent during the JSON handshake."""
         self.device_name = name
 
+    def set_ble_broadcast_name(self, name):
+        """Sets the Bluetooth scanner name. Only applies if transport is BLE."""
+        pass
+
+    def start_advertising(self):
+        """Starts BLE broadcasting. Ignored if using USB or WiFi."""
+        pass
+        
+    def stop_advertising(self):
+        """Stops BLE broadcasting. Ignored if using USB or WiFi."""
+        pass
+
     def add_capability(self, feature_name):
         """Registers a capability flag to tell the dashboard to render a specific widget."""
         if feature_name not in self.capabilities:
