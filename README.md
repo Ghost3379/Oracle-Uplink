@@ -7,9 +7,9 @@
 ---
 
 ## 📡 What is this?
-**Oracle Uplink** is a modular Python package designed for CircuitPython boards (like the ESP32-S3). It acts as a universal "Post Office" between your custom hardware and the Oracle Network web dashboard. 
+**Oracle Uplink** is a modular bridge library designed for both **CircuitPython** and **Arduino (C++)**. It acts as a universal "Post Office" between your custom hardware and the Oracle Network web dashboard. 
 
-Instead of writing complex Bluetooth or WebSocket code for every new gadget you build, you simply drop this library onto your board, declare what features your gadget has (e.g. `neopixel`, `gyroscope`), and the library automatically handles the secure handshake and JSON telemetry streaming.
+Instead of writing complex Bluetooth or WebSocket code for every new gadget you build, you simply include this library on your board, declare what features your gadget has (e.g. `neopixel`, `gyroscope`), and the library automatically handles the secure handshake and JSON telemetry streaming.
 
 ### 🌐 Multi-Transport Support
 The library supports three connection methods without changing any of your data payloads:
@@ -19,15 +19,11 @@ The library supports three connection methods without changing any of your data 
 
 ---
 
-## ⚙️ Installation (CircuitPython)
+## ⚙️ Installation
 
-1. Ensure your board is flashed with **CircuitPython 9.x or 10.x**.
-2. Download the official [CircuitPython Library Bundle](https://circuitpython.org/libraries) matching your version.
-3. Depending on which connection method you want to use, drag the following folders from the bundle into your board's `CIRCUITPY/lib/` drive:
-   - For **BLE**: You must copy the `adafruit_ble` folder.
-   - For **WIFI**: You must copy the `adafruit_httpserver` folder.
-   - For **USB**: No extra libraries are needed!
-4. Finally, copy the `oracle_uplink` folder from this repository into your `CIRCUITPY/lib/` drive.
+Because this library supports both languages, please navigate to the specific folder for your setup:
+- [CircuitPython Installation Guide](./CircuitPython/README.md)
+- [Arduino (C++) Installation Guide](./Arduino/README.md)
 
 ---
 
