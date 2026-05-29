@@ -12,10 +12,9 @@
 Instead of writing complex Bluetooth or WebSocket code for every new gadget you build, you simply include this library on your board, declare what features your gadget has (e.g. `neopixel`, `gyroscope`), and the library automatically handles the secure handshake and JSON telemetry streaming.
 
 ### 🌐 Multi-Transport Support
-The library supports three connection methods without changing any of your data payloads:
+The library supports two highly secure connection methods without changing any of your data payloads:
 - **BLE (Bluetooth Low Energy):** Connect wirelessly via Web Bluetooth.
 - **USB (Web Serial):** Connect instantly using a standard USB-C data cable.
-- **WIFI (WebSockets):** Connect over your local network for ultra-fast, long-range telemetry.
 
 ---
 
@@ -79,8 +78,7 @@ By using `uplink.add_capability("battery")`, the website reads this handshake an
 ## 🏗️ Roadmap
 - [x] CircuitPython BLE Transport
 - [x] CircuitPython USB (Web Serial) Transport
-- [x] CircuitPython WiFi (WebSocket) Transport
-- [x] Arduino (C++) Library Port (Coming Soon)
+- [x] Arduino (C++) Library Port
 - [ ] Test Wifi & USB Connection
 - [ ] Test Arduino Library
 

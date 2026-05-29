@@ -14,7 +14,6 @@ This is the Python implementation of the Oracle Uplink bridge library.
 Depending on which transport method you want to use, you must copy the following folders from the Library Bundle into your `lib/` folder:
 
 * **BLE**: Requires the `adafruit_ble` folder.
-* **WIFI**: Requires the `adafruit_httpserver` folder.
 * **USB**: Requires no external dependencies!
 
 ## Usage

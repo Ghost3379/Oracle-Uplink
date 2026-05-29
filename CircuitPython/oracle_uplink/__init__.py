@@ -14,9 +14,5 @@ def OracleUplink(transport="BLE", **kwargs):
         from .usb import USBUplink
         return USBUplink(**kwargs)
         
-    elif t == "WIFI":
-        from .wifi import WiFiUplink
-        return WiFiUplink(**kwargs)
-        
     else:
-        raise ValueError("Invalid transport. Use 'BLE', 'USB', or 'WIFI'.")
+        raise ValueError("Invalid transport. Use 'BLE' or 'USB'.")
