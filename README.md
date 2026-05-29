@@ -2,7 +2,7 @@
 
 > **The official hardware bridge library for the Oracle Network.**
 > 
-> *Seamlessly integrate your DIY microcontrollers and tactical gadgets into the Oracle Network ecosystem via BLE, USB, or WiFi.*
+> *Seamlessly integrate your DIY microcontrollers and tactical gadgets into the Oracle Network ecosystem via BLE or USB.*
 
 ---
 
