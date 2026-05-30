@@ -47,5 +47,5 @@ void setup() {
 void loop() {
   // Handles BLE handshakes, incoming commands, and watchdog
   uplink.update();
-  delay(10);
+  delay(1);
 }

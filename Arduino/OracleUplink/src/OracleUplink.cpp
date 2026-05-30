@@ -25,19 +25,23 @@ volatile bool isrNewData = false;
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer) {
+      Serial.println("[BLE ISR] Client Connected! (Sig 1)");
       deviceConnected = true;
     };
     void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
+      Serial.println("[BLE ISR] Client Connected! (Sig 2)");
       deviceConnected = true;
       pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60); // Stabilize Windows WebBLE
     }
     void onDisconnect(NimBLEServer* pServer) {
+      Serial.println("[BLE ISR] Client Disconnected!");
       deviceConnected = false;
     }
 };
 
 class MyCallbacks: public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic *pCharacteristic) {
+      Serial.println("[BLE ISR] onWrite Triggered! Receiving data...");
       std::string rxValue = pCharacteristic->getValue();
       int len = rxValue.length();
       if (len > 0 && (isrRxLen + len) < RX_BUF_SIZE - 1) {
@@ -227,7 +231,17 @@ void OracleUplink::_updateBLE() {
         isrRxBuffer[0] = '\0';
         isrNewData = false;
         
-        Serial.println("[MAIN] Extracted command from ISR: " + msg);
+        Serial.println("[MAIN] Raw buffer extracted: " + msg);
+        
+        // Base44's INIT command doesn't always have a newline!
+        String tempMsg = msg;
+        tempMsg.trim();
+        tempMsg.toUpperCase();
+        if (tempMsg == "INIT") {
+            _lastMsgTime = millis();
+            _processIncomingText("INIT");
+            msg = ""; // Clear it so the while loop ignores it
+        }
         
         int newlineIdx = msg.indexOf('\n');
         while (newlineIdx != -1) {
