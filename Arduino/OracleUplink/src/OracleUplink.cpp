@@ -212,8 +212,18 @@ void OracleUplink::_updateBLE() {
 
 void OracleUplink::_sendJsonBLE(String jsonStr) {
     if (deviceConnected) {
-        // NimBLE handles the chunking fragmentation natively!
-        pTxCharacteristic->setValue((uint8_t*)jsonStr.c_str(), jsonStr.length());
-        pTxCharacteristic->notify();
+        int length = jsonStr.length();
+        int offset = 0;
+        int maxChunkSize = 20; // Safe BLE MTU limit
+        while (offset < length) {
+            int chunkSize = length - offset;
+            if (chunkSize > maxChunkSize) {
+                chunkSize = maxChunkSize;
+            }
+            pTxCharacteristic->setValue((uint8_t*)(jsonStr.c_str() + offset), chunkSize);
+            pTxCharacteristic->notify();
+            offset += chunkSize;
+            delay(10); // Prevent internal BLE queue overflow
+        }
     }
 }
