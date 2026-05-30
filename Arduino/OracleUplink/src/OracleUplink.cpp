@@ -12,8 +12,8 @@
 // NimBLE Globals
 NimBLEServer *pServer = NULL;
 NimBLECharacteristic *pTxCharacteristic = NULL;
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
+volatile bool deviceConnected = false;
+volatile bool oldDeviceConnected = false;
 String rxBuffer = "";
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
@@ -94,11 +94,14 @@ void OracleUplink::_processIncomingText(String text) {
     if(text.length() == 0) return;
 
     Serial.println("[UPLINK RX] " + text);
+    Serial.flush();
 
     String textUpper = text;
     textUpper.toUpperCase();
 
     if (textUpper == "INIT") {
+        Serial.println("[UPLINK] Processing INIT request...");
+        Serial.flush();
         _sendHandshake();
     } else if (textUpper == "PING") {
         JsonDocument doc;
@@ -179,9 +182,7 @@ void OracleUplink::_updateBLE() {
         _isConnected = true;
         _lastMsgTime = millis();
         Serial.println(">>> BLE SECURE LINK ESTABLISHED <<<");
-        // Delay to allow Base44 to mount listeners
-        delay(1500);
-        _sendHandshake();
+        Serial.flush();
     }
     
     if (!deviceConnected && oldDeviceConnected) {
