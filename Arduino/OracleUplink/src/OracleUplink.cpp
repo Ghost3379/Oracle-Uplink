@@ -163,7 +163,6 @@ void OracleUplink::_beginBLE() {
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->setName(_bleBroadcastName.c_str());
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setScanResponse(true);
     pAdvertising->start();
     
     Serial.println("Advertising as " + _bleBroadcastName);
