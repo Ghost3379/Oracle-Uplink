@@ -18,9 +18,11 @@ String rxBuffer = "";
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer) {
+      Serial.println("[BLE] Client Connected!");
       deviceConnected = true;
     };
     void onDisconnect(NimBLEServer* pServer) {
+      Serial.println("[BLE] Client Disconnected!");
       deviceConnected = false;
     }
 };
@@ -90,6 +92,8 @@ void OracleUplink::sendJson(JsonDocument& doc) {
 void OracleUplink::_processIncomingText(String text) {
     text.trim();
     if(text.length() == 0) return;
+
+    Serial.println("[UPLINK RX] " + text);
 
     String textUpper = text;
     textUpper.toUpperCase();
@@ -212,6 +216,7 @@ void OracleUplink::_updateBLE() {
 
 void OracleUplink::_sendJsonBLE(String jsonStr) {
     if (deviceConnected) {
+        Serial.println("[UPLINK TX] " + jsonStr);
         int length = jsonStr.length();
         int offset = 0;
         int maxChunkSize = 20; // Safe BLE MTU limit
