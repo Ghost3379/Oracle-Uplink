@@ -24,23 +24,19 @@ volatile int isrRxLen = 0;
 volatile bool isrNewData = false;
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
-    void onConnect(NimBLEServer* pServer) {
-      Serial.println("[BLE ISR] Client Connected! (Sig 1)");
+    void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
+      Serial.println("[BLE ISR] Client Connected!");
       deviceConnected = true;
-    };
-    void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
-      Serial.println("[BLE ISR] Client Connected! (Sig 2)");
-      deviceConnected = true;
-      pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60); // Stabilize Windows WebBLE
+      pServer->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 60); // Stabilize Windows WebBLE
     }
-    void onDisconnect(NimBLEServer* pServer) {
+    void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
       Serial.println("[BLE ISR] Client Disconnected!");
       deviceConnected = false;
     }
 };
 
 class MyCallbacks: public NimBLECharacteristicCallbacks {
-    void onWrite(NimBLECharacteristic *pCharacteristic) {
+    void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo) override {
       Serial.println("[BLE ISR] onWrite Triggered! Receiving data...");
       std::string rxValue = pCharacteristic->getValue();
       int len = rxValue.length();
