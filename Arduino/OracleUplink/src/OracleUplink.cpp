@@ -15,6 +15,9 @@ NimBLECharacteristic *pTxCharacteristic = NULL;
 volatile bool deviceConnected = false;
 volatile bool oldDeviceConnected = false;
 String rxBuffer = "";
+SemaphoreHandle_t rxMutex;
+int connectionState = 0; // 0=Disconnected, 1=Waiting, 2=Ready
+unsigned long connectionTimer = 0;
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer) {
@@ -29,10 +32,17 @@ class MyServerCallbacks: public NimBLEServerCallbacks {
 
 class MyCallbacks: public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic *pCharacteristic) {
+      Serial.println("[BLE ISR] onWrite Triggered! Receiving data...");
       std::string rxValue = pCharacteristic->getValue();
       if (rxValue.length() > 0) {
-        for (int i = 0; i < rxValue.length(); i++) {
-          rxBuffer += (char)rxValue[i]; // Buffer incoming chunks
+        if (xSemaphoreTake(rxMutex, (TickType_t)10) == pdTRUE) {
+            for (int i = 0; i < rxValue.length(); i++) {
+              rxBuffer += (char)rxValue[i]; // Buffer incoming chunks securely
+            }
+            xSemaphoreGive(rxMutex);
+            Serial.println("[BLE ISR] Data safely buffered.");
+        } else {
+            Serial.println("[BLE ISR] Mutex timeout! Data dropped to prevent panic.");
         }
       }
     }
@@ -148,6 +158,8 @@ void OracleUplink::update() {
 }
 
 void OracleUplink::_beginBLE() {
+    Serial.println("[MAIN] Initializing NimBLE Stack...");
+    rxMutex = xSemaphoreCreateMutex();
     NimBLEDevice::init(_bleBroadcastName.c_str());
     
     pServer = NimBLEDevice::createServer();
@@ -181,27 +193,47 @@ void OracleUplink::_updateBLE() {
         oldDeviceConnected = deviceConnected;
         _isConnected = true;
         _lastMsgTime = millis();
-        Serial.println(">>> BLE SECURE LINK ESTABLISHED <<<");
+        connectionState = 1; // Waiting state
+        connectionTimer = millis();
+        Serial.println("[MAIN] >>> BLE SECURE LINK ESTABLISHED <<<");
+        Serial.println("[MAIN] Stopping Advertising (Python Parity)");
+        pServer->getAdvertising()->stop();
         Serial.flush();
     }
     
     if (!deviceConnected && oldDeviceConnected) {
         _isConnected = false;
+        connectionState = 0;
         delay(500); 
         pServer->startAdvertising();
-        Serial.println(">>> BLE LINK SEVERED. Re-advertising... <<<");
+        Serial.println("[MAIN] >>> BLE LINK SEVERED. Re-advertising... <<<");
         oldDeviceConnected = deviceConnected;
     }
 
-    // Process chunked data in rxBuffer by splitting on newline
+    // State Machine: 2-second proactive handshake
+    if (connectionState == 1) {
+        if (millis() - connectionTimer > 2000) {
+            connectionState = 2; // Ready state
+            Serial.println("[MAIN] 2-second wait complete. Sending Proactive Handshake...");
+            _sendHandshake();
+        }
+    }
+
+    // Process chunked data in rxBuffer securely via Mutex
     if (rxBuffer.length() > 0) {
-        int newlineIdx = rxBuffer.indexOf('\n');
-        while (newlineIdx != -1) {
-            _lastMsgTime = millis(); // Reset watchdog
-            String completeMessage = rxBuffer.substring(0, newlineIdx);
-            rxBuffer = rxBuffer.substring(newlineIdx + 1);
-            _processIncomingText(completeMessage);
-            newlineIdx = rxBuffer.indexOf('\n');
+        if (xSemaphoreTake(rxMutex, (TickType_t)10) == pdTRUE) {
+            int newlineIdx = rxBuffer.indexOf('\n');
+            while (newlineIdx != -1) {
+                _lastMsgTime = millis(); // Reset watchdog
+                String completeMessage = rxBuffer.substring(0, newlineIdx);
+                rxBuffer = rxBuffer.substring(newlineIdx + 1);
+                
+                Serial.println("[MAIN] Extracted complete command from buffer: " + completeMessage);
+                _processIncomingText(completeMessage);
+                
+                newlineIdx = rxBuffer.indexOf('\n');
+            }
+            xSemaphoreGive(rxMutex);
         }
     }
 
