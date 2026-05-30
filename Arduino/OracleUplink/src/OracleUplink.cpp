@@ -114,27 +114,49 @@ void OracleUplink::_processIncomingText(String text) {
         Serial.println("[UPLINK] Processing INIT request...");
         Serial.flush();
         _sendHandshake();
+        return;
     } else if (textUpper == "PING") {
         JsonDocument doc;
         doc["type"] = "pong";
         sendJson(doc);
-    } else {
-        // Parse "COMMAND:VALUE" format
-        int colonIdx = text.indexOf(':');
-        if (colonIdx != -1) {
-            String cmd = text.substring(0, colonIdx);
-            cmd.toUpperCase();
-            String val = text.substring(colonIdx + 1);
-            if (_callbacksWithValue.count(cmd) > 0) {
-                _callbacksWithValue[cmd](val);
-                return;
+        return;
+    }
+
+    // Try parsing as JSON first (Base44 Web standard)
+    if (text.startsWith("{")) {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, text);
+        if (!error) {
+            if (doc["type"] == "command") {
+                String cap = doc["capability"].as<String>();
+                cap.toUpperCase();
+                String val = doc["value"].as<String>();
+                
+                if (_callbacksWithValue.count(cap) > 0) {
+                    _callbacksWithValue[cap](val);
+                } else if (_callbacksNoValue.count(cap) > 0) {
+                    _callbacksNoValue[cap]();
+                }
             }
+            return;
         }
-        
-        // Exact command match
-        if (_callbacksNoValue.count(textUpper) > 0) {
-            _callbacksNoValue[textUpper]();
+    }
+
+    // Fallback: Parse "COMMAND:VALUE" text format (For manual USB testing)
+    int colonIdx = text.indexOf(':');
+    if (colonIdx != -1) {
+        String cmd = text.substring(0, colonIdx);
+        cmd.toUpperCase();
+        String val = text.substring(colonIdx + 1);
+        if (_callbacksWithValue.count(cmd) > 0) {
+            _callbacksWithValue[cmd](val);
+            return;
         }
+    }
+    
+    // Exact text command match
+    if (_callbacksNoValue.count(textUpper) > 0) {
+        _callbacksNoValue[textUpper]();
     }
 }
 

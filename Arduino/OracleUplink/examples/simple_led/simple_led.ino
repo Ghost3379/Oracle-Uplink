@@ -22,8 +22,8 @@ void setup() {
   // Register Capabilities
   uplink.addCapability("neopixel");
 
-  // Register command to change NeoPixel color (e.g. COLOR:#FF00FF)
-  uplink.onCommand("COLOR", [](String val) {
+  // Register command to change NeoPixel color from Base44
+  uplink.onCommand("neopixel", [](String val) {
     if (val.startsWith("#")) {
       long number = strtol(&val[1], NULL, 16);
       int r = number >> 16;
