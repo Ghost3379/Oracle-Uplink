@@ -14,36 +14,37 @@ NimBLEServer *pServer = NULL;
 NimBLECharacteristic *pTxCharacteristic = NULL;
 volatile bool deviceConnected = false;
 volatile bool oldDeviceConnected = false;
-String rxBuffer = "";
-SemaphoreHandle_t rxMutex;
 int connectionState = 0; // 0=Disconnected, 1=Waiting, 2=Ready
 unsigned long connectionTimer = 0;
 
+// Safe ISR Buffer (Zero Dynamic Memory)
+#define RX_BUF_SIZE 256
+volatile char isrRxBuffer[RX_BUF_SIZE];
+volatile int isrRxLen = 0;
+volatile bool isrNewData = false;
+
 class MyServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer) {
-      Serial.println("[BLE] Client Connected!");
       deviceConnected = true;
     };
+    void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
+      deviceConnected = true;
+      pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60); // Stabilize Windows WebBLE
+    }
     void onDisconnect(NimBLEServer* pServer) {
-      Serial.println("[BLE] Client Disconnected!");
       deviceConnected = false;
     }
 };
 
 class MyCallbacks: public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic *pCharacteristic) {
-      Serial.println("[BLE ISR] onWrite Triggered! Receiving data...");
       std::string rxValue = pCharacteristic->getValue();
-      if (rxValue.length() > 0) {
-        if (xSemaphoreTake(rxMutex, (TickType_t)10) == pdTRUE) {
-            for (int i = 0; i < rxValue.length(); i++) {
-              rxBuffer += (char)rxValue[i]; // Buffer incoming chunks securely
-            }
-            xSemaphoreGive(rxMutex);
-            Serial.println("[BLE ISR] Data safely buffered.");
-        } else {
-            Serial.println("[BLE ISR] Mutex timeout! Data dropped to prevent panic.");
-        }
+      int len = rxValue.length();
+      if (len > 0 && (isrRxLen + len) < RX_BUF_SIZE - 1) {
+          memcpy((void*)(isrRxBuffer + isrRxLen), rxValue.c_str(), len);
+          isrRxLen += len;
+          isrRxBuffer[isrRxLen] = '\0';
+          isrNewData = true;
       }
     }
 };
@@ -158,9 +159,9 @@ void OracleUplink::update() {
 }
 
 void OracleUplink::_beginBLE() {
-    Serial.println("[MAIN] Initializing NimBLE Stack...");
-    rxMutex = xSemaphoreCreateMutex();
+    Serial.println("[MAIN] Initializing NimBLE Stack (V3 Safe)...");
     NimBLEDevice::init(_bleBroadcastName.c_str());
+    NimBLEDevice::setMTU(512); // Vital for Web Bluetooth compatibility
     
     pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
@@ -219,21 +220,30 @@ void OracleUplink::_updateBLE() {
         }
     }
 
-    // Process chunked data in rxBuffer securely via Mutex
-    if (rxBuffer.length() > 0) {
-        if (xSemaphoreTake(rxMutex, (TickType_t)10) == pdTRUE) {
-            int newlineIdx = rxBuffer.indexOf('\n');
-            while (newlineIdx != -1) {
-                _lastMsgTime = millis(); // Reset watchdog
-                String completeMessage = rxBuffer.substring(0, newlineIdx);
-                rxBuffer = rxBuffer.substring(newlineIdx + 1);
-                
-                Serial.println("[MAIN] Extracted complete command from buffer: " + completeMessage);
-                _processIncomingText(completeMessage);
-                
-                newlineIdx = rxBuffer.indexOf('\n');
-            }
-            xSemaphoreGive(rxMutex);
+    // Process chunked data safely
+    if (isrNewData) {
+        String msg = String((char*)isrRxBuffer);
+        isrRxLen = 0; // Clear buffer
+        isrRxBuffer[0] = '\0';
+        isrNewData = false;
+        
+        Serial.println("[MAIN] Extracted command from ISR: " + msg);
+        
+        int newlineIdx = msg.indexOf('\n');
+        while (newlineIdx != -1) {
+            _lastMsgTime = millis(); // Reset watchdog
+            String completeMessage = msg.substring(0, newlineIdx);
+            msg = msg.substring(newlineIdx + 1);
+            
+            _processIncomingText(completeMessage);
+            newlineIdx = msg.indexOf('\n');
+        }
+        
+        // Put any leftover fragment back into the buffer
+        if (msg.length() > 0) {
+            memcpy((void*)isrRxBuffer, msg.c_str(), msg.length());
+            isrRxLen = msg.length();
+            isrRxBuffer[isrRxLen] = '\0';
         }
     }
 
