@@ -1,7 +1,8 @@
 #include <OracleUplink.h>
 #include <Adafruit_NeoPixel.h>
 
-#define PIN        33 // Change this to your board's NeoPixel pin! (Feather S3 uses 33 usually)
+#define PIN        40 // UM FeatherS3 NeoPixel Data Pin
+#define POWER_PIN  39 // UM FeatherS3 NeoPixel Power Pin
 #define NUMPIXELS  1
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
@@ -11,6 +12,11 @@ OracleUplink uplink("BLE");
 
 void setup() {
   Serial.begin(115200);
+  
+  // UM FeatherS3 requires the NeoPixel power pin to be pulled HIGH
+  pinMode(POWER_PIN, OUTPUT);
+  digitalWrite(POWER_PIN, HIGH);
+  
   pixels.begin();
   pixels.clear();
   pixels.show();
@@ -23,7 +29,7 @@ void setup() {
   uplink.addCapability("neopixel");
 
   // Register command to change NeoPixel color from Base44
-  uplink.onCommand("neopixel", [](String val) {
+  uplink.onCommand("COLOR", [](String val) {
     if (val.startsWith("#")) {
       long number = strtol(&val[1], NULL, 16);
       int r = number >> 16;
