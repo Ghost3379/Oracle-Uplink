@@ -204,7 +204,7 @@ void OracleUplink::_updateBLE() {
         if (millis() - _lastMsgTime > _timeoutMs) {
             Serial.println(">>> WATCHDOG TIMEOUT. Forcing disconnect... <<<");
             // Disconnect peer 0 (Web Bluetooth)
-            pServer->disconnect(pServer->getPeerIDInfo(0).getConnHandle());
+            pServer->disconnect(pServer->getPeerInfo(0).getConnHandle());
         }
     }
 }
