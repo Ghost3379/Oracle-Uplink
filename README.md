@@ -79,8 +79,8 @@ By using `uplink.add_capability("battery")`, the website reads this handshake an
 - [x] CircuitPython BLE Transport
 - [x] CircuitPython USB (Web Serial) Transport
 - [x] Arduino (C++) Library Port
-- [ ] Test Wifi & USB Connection
-- [ ] Test Arduino Library
+- [x] Test Wifi & USB Connection
+- [x] Test Arduino Library
 
 ---
 *Wayne Tech Enterprises / Applied Science Division*
