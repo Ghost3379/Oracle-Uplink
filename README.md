@@ -40,7 +40,7 @@ from oracle_uplink import OracleUplink
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
 # 2. Initialize the Uplink Bridge
-# You can change transport to "USB" or "WIFI" instantly.
+# You can change transport to "USB" instantly.
 uplink = OracleUplink(transport="BLE")
 
 # 3. Configure your Gadget Identity
@@ -79,7 +79,7 @@ By using `uplink.add_capability("battery")`, the website reads this handshake an
 - [x] CircuitPython BLE Transport
 - [x] CircuitPython USB (Web Serial) Transport
 - [x] Arduino (C++) Library Port
-- [x] Test Wifi & USB Connection
+- [x] Test USB Connection
 - [x] Test Arduino Library
 
 ---

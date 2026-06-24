@@ -17,11 +17,11 @@ class UplinkBase:
         pass
 
     def start_advertising(self):
-        """Starts BLE broadcasting. Ignored if using USB or WiFi."""
+        """Starts BLE broadcasting. Ignored if using USB."""
         pass
         
     def stop_advertising(self):
-        """Stops BLE broadcasting. Ignored if using USB or WiFi."""
+        """Stops BLE broadcasting. Ignored if using USB."""
         pass
 
     def add_capability(self, feature_name):

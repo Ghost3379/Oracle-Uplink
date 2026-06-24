@@ -1,7 +1,7 @@
 def OracleUplink(transport="BLE", **kwargs):
     """
     Factory function to instantiate the correct transport layer dynamically.
-    This prevents heavy libraries (like adafruit_ble or wifi) from loading into 
+    This prevents heavy libraries (like adafruit_ble) from loading into 
     memory unless they are explicitly requested by the user.
     """
     t = transport.upper()

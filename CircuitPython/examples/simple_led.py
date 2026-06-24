@@ -7,7 +7,7 @@ from oracle_uplink import OracleUplink
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
 # 2. Initialize the Uplink Bridge
-# Change transport to "USB" or "WIFI" depending on how you want to connect
+# Change transport to "USB" depending on how you want to connect
 uplink = OracleUplink(transport="BLE")
 
 # 3. Configure your Gadget Identity
